@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Min Geometry Dash Klon</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border: 2px solid #fff;
+            background: linear-gradient(to bottom, #000046, #1cb5e0);
+        }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="instructions">
+        <h1>Geometry Dash Klon</h1>
+        <p>Trykk <strong>MELLOMROM</strong> eller klikk for å hoppe!</p>
+    </div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Spillvariabler
+        let player = { x: 50, y: 300, w: 30, h: 30, dy: 0, jumpPower: -12, grounded: false };
+        let gravity = 0.6;
+        let obstacles = [];
+        let frame = 0;
+        let score = 0;
+        let gameOver = false;
+        let gameSpeed = 5;
+
+        function drawPlayer() {
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            // Litt detaljer på spilleren
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(player.x, player.y, player.w, player.h);
+        }
+
+        function createObstacle() {
+            // Lager pigger (trekanter)
+            let size = Math.floor(Math.random() * 20) + 30;
+            obstacles.push({ x: canvas.width, y: 350 - size, w: size, h: size });
+        }
+
+        function drawObstacles() {
+            ctx.fillStyle = "red";
+            obstacles.forEach(obs => {
+                ctx.beginPath();
+                ctx.moveTo(obs.x, obs.y + obs.h);
+                ctx.lineTo(obs.x + obs.w / 2, obs.y);
+                ctx.lineTo(obs.x + obs.w, obs.y + obs.h);
+                ctx.fill();
+            });
+        }
+
+        function update() {
+            if (gameOver) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "white";
+                ctx.font = "40px Arial";
+                ctx.fillText("Game Over!", 300, 200);
+                ctx.font = "20px Arial";
+                ctx.fillText("Trykk Mellomrom for å starte på nytt", 260, 250);
+                return;
+            }
+
+            // Fysikk
+            player.dy += gravity;
+            player.y += player.dy;
+
+            // Bakkenivå
+            if (player.y + player.h > 350) {
+                player.y = 350 - player.h;
+                player.dy = 0;
+                player.grounded = true;
+            } else {
+                player.grounded = false;
+            }
+
+            // Hinderhåndtering
+            if (frame % 90 === 0) createObstacle(); // Nytt hinder hver 90. frame
+            
+            obstacles.forEach((obs, index) => {
+                obs.x -= gameSpeed;
+
+                // Kollisjonssjekk (enkel boks-sjekk)
+                if (
+                    player.x < obs.x + obs.w &&
+                    player.x + player.w > obs.x &&
+                    player.y < obs.y + obs.h &&
+                    player.y + player.h > obs.y
+                ) {
+                    gameOver = true;
+                }
+
+                // Fjern hinder som er utenfor skjermen
+                if (obs.x + obs.w < 0) {
+                    obstacles.splice(index, 1);
+                    score++;
+                    if(score % 5 === 0) gameSpeed += 0.5; // Øk farten gradvis
+                }
+            });
+
+            // Tegning
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Tegn bakken
+            ctx.fillStyle = "#333";
+            ctx.fillRect(0, 350, canvas.width, 50);
+            
+            drawPlayer();
+            drawObstacles();
+
+            // Score
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.fillText("Score: " + score, 10, 30);
+
+            frame++;
+            requestAnimationFrame(update);
+        }
+
+        function jump() {
+            if (gameOver) {
+                // Reset spill
+                player.y = 300;
+                player.dy = 0;
+                obstacles = [];
+                score = 0;
+                frame = 0;
+                gameSpeed = 5;
+                gameOver = false;
+                update();
+            } else if (player.grounded) {
+                player.dy = player.jumpPower;
+            }
+        }
+
+        // Kontrollere
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Space") jump();
+        });
+        window.addEventListener("touchstart", jump);
+        window.addEventListener("click", jump);
+
+        update();
+    </script>
+</body>
+</html>
